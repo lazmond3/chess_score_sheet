@@ -157,7 +157,11 @@ fn main() {
     println!("target_club.name: {:?}", target_club.name());
     println!("target_club.url: {:?}", target_club.url());
     for e in target_club.scrape_event() {
-        println!("target_club open_time: {:?}", e.open_time);
+        println!("========");
+        println!("date: {:?}", e.date);
+        println!("open_time: {:?}", e.open_time);
+        println!("revenue: {:?}", e.revenue);
+        println!("fee: {:?}", e.fee);
     }
 }
 

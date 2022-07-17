@@ -161,16 +161,16 @@ fn main() {
     }
 }
 
-fn create_chess_club(target: &str) -> impl ChessClub {
-    let target_club = match target {
-        "8x8" => ChessClub8x8 {
+fn create_chess_club(target: &str) -> Box<dyn ChessClub> {
+    let target_club: Box<dyn ChessClub> = match target {
+        "8x8" => Box::new(ChessClub8x8 {
             _name: String::from(target),
             _url: String::from("https://8by8.hatenablog.com/"),
-        },
-        // "KitaSenjyu" => ChessClubKitaSenjyu {
-        //     _name: String::from(target),
-        //     _url: String::from("https://blog.rust-lang.org/"),
-        // },
+        }),
+        "KitaSenjyu" => Box::new(ChessClubKitaSenjyu {
+            _name: String::from(target),
+            _url: String::from("https://blog.rust-lang.org/"),
+        }),
         _ => panic!("Error, not supported target: ${:?}", target),
     };
 

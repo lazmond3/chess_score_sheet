@@ -33,14 +33,14 @@ impl ChessClub for ChessClub8x8 {
 
         let mut events = Vec::new();
         for div in div_elements {
-            println!("================");
+            log::info!("================");
             let mut date = String::from("");
             let mut open_time = String::from("");
             let mut revenue = String::from("");
             let mut fee = String::from("");
             for e in div.select(&p_selector) {
                 let text = e.text().collect::<Vec<_>>().join("");
-                println!("text: {:?}", text);
+                log::info!("text: {:?}", text);
 
                 if text.contains("場所:") {
                     revenue = String::from(text.trim().trim_start_matches("場所:").trim());
@@ -58,9 +58,6 @@ impl ChessClub for ChessClub8x8 {
                 let re = regex::Regex::new(r"(\d{2})時\d{2}分〜\d{2}時\d{2}分").unwrap();
                 if re.is_match(&text) {
                     open_time = String::from(text.trim());
-                    println!("open_time: {:?}", open_time);
-                } else {
-                    println!("NOT open_time: {:?}", text);
                 }
             }
 
@@ -99,14 +96,14 @@ impl ChessClub for ChessClubKitaSenjyu {
 
         let mut events = Vec::new();
         for div in div_elements {
-            println!("================");
+            // log::info!("================");
             let mut date = String::from("");
             let mut open_time = String::from("");
             let mut revenue = String::from("");
             let mut fee = String::from("");
             for e in div.select(&p_selector) {
                 let text = e.text().collect::<Vec<_>>().join("");
-                println!("text: {:?}", text);
+                // log::info!("text: {:?}", text);
 
                 if text.contains("場所:") {
                     revenue = String::from(text.trim().trim_start_matches("場所:").trim());
@@ -124,9 +121,9 @@ impl ChessClub for ChessClubKitaSenjyu {
                 let re = regex::Regex::new(r"(\d{2})時\d{2}分〜\d{2}時\d{2}分").unwrap();
                 if re.is_match(&text) {
                     open_time = String::from(text.trim());
-                    println!("open_time: {:?}", open_time);
+                    // log::info!("open_time: {:?}", open_time);
                 } else {
-                    println!("NOT open_time: {:?}", text);
+                    // log::info!("NOT open_time: {:?}", text);
                 }
             }
 
@@ -144,24 +141,26 @@ impl ChessClub for ChessClubKitaSenjyu {
 }
 
 fn main() {
+    env_logger::init();
+
     let args: Vec<String> = std::env::args().collect();
-    println!("{:?}", args);
+    log::info!("args: {:?}", args);
     let mut target = "8x8"; // TODO: change to "ALL"
     if args.len() > 1 {
         target = &args[1];
     }
-    println!("target: {:?}", target);
+    log::info!("target: {:?}", target);
 
     let target_club = create_chess_club(target);
 
-    println!("target_club.name: {:?}", target_club.name());
-    println!("target_club.url: {:?}", target_club.url());
+    log::info!("target_club.name: {:?}", target_club.name());
+    log::info!("target_club.url: {:?}", target_club.url());
     for e in target_club.scrape_event() {
-        println!("========");
-        println!("date: {:?}", e.date);
-        println!("open_time: {:?}", e.open_time);
-        println!("revenue: {:?}", e.revenue);
-        println!("fee: {:?}", e.fee);
+        log::info!("========");
+        log::info!("date: {:?}", e.date);
+        log::info!("open_time: {:?}", e.open_time);
+        log::info!("revenue: {:?}", e.revenue);
+        log::info!("fee: {:?}", e.fee);
     }
 }
 

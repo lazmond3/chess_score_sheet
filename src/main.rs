@@ -1,3 +1,6 @@
+use yaml_rust::{Yaml, YamlLoader, YamlEmitter};
+use linked_hash_map::LinkedHashMap;
+
 pub struct EventInfo {
     date: String,
     open_time: String,
@@ -6,6 +9,7 @@ pub struct EventInfo {
 }
 
 pub trait ChessClub {
+    fn to_yaml(&self) -> String;
     fn name(&self) -> &String;
     fn url(&self) -> &String;
     fn scrape_event(&self) -> Vec<EventInfo>;
@@ -17,6 +21,30 @@ struct ChessClub8x8 {
 }
 
 impl ChessClub for ChessClub8x8 {
+    fn to_yaml(&self) -> String {
+        // let mut out_yaml = Yaml::Array(vec![Yaml::Real("-1".to_string()), Yaml::String("abc".to_string())]);
+        let mut map = LinkedHashMap::new();
+        map.insert(Yaml::String("name".to_string()), Yaml::String(self.name().to_string()));
+        map.insert(Yaml::String("url".to_string()), Yaml::String(self.url().to_string()));
+
+        let mut event_map = LinkedHashMap::new();
+        event_map.insert(Yaml::String("date".to_string()), Yaml::String("TEST_DATE".to_string()));
+        event_map.insert(Yaml::String("open_time".to_string()), Yaml::String("TEST_OPEN_TIME".to_string()));
+
+        let mut event_map2 = LinkedHashMap::new();
+        event_map2.insert(Yaml::String("date".to_string()), Yaml::String("TEST_DATE2".to_string()));
+        event_map2.insert(Yaml::String("open_time".to_string()), Yaml::String("TEST_OPEN_TIME2".to_string()));
+        let events = Yaml::Array(vec![Yaml::Hash(event_map), Yaml::Hash(event_map2)]);
+        map.insert(Yaml::String("events".to_string()), events);
+
+
+        let mut out_yaml = Yaml::Array(vec![Yaml::Hash(map)]);
+
+        let mut out_str = String::new();
+        let mut emitter = YamlEmitter::new(&mut out_str);
+        emitter.dump(&out_yaml).unwrap();
+        out_str
+    }
     fn name(&self) -> &String {
         &self._name
     }
@@ -80,6 +108,9 @@ struct ChessClubKitaSenjyu {
 }
 
 impl ChessClub for ChessClubKitaSenjyu {
+    fn to_yaml(&self) -> String {
+        "".to_string()
+    }
     fn name(&self) -> &String {
         &self._name
     }
@@ -162,6 +193,8 @@ fn main() {
         log::info!("revenue: {:?}", e.revenue);
         log::info!("fee: {:?}", e.fee);
     }
+
+    println!("{}", target_club.to_yaml());
 }
 
 fn create_chess_club(target: &str) -> Box<dyn ChessClub> {

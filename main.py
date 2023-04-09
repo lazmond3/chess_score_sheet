@@ -13,11 +13,10 @@ def main():
     cv2.imwrite("data/clipped_paper.png", img)
 
     # recognize notations
-    notations = list_notations(img)
-    print('notations:', notations)
+    img_notation_table, move_rect_pos_list = list_notations(img)
+    # print('move_rect_pos_list[:3]:', move_rect_pos_list[:3])
 
-    # cv2.imshow('window', img)
-    # cv2.waitKey(5000)
+    move_rect_imgs = get_img_patches(img_notation_table, move_rect_pos_list)
 
 
 def clipped_paper(img, x_size, y_size):
@@ -110,30 +109,54 @@ def list_notations(img):
 
     # TODO remove this part
     h, w, _ = img_notation_table.shape
-    print('width:  ', w, 'height: ', h)
+    # print('width:  ', w, 'height: ', h)
 
     img_notation_table_rec = img_notation_table.copy()
     column_move_num = 30  # 1 column has 30 moves
     elem_h = h / column_move_num
     buffer = 0.2
     row_elem_size_ratio = [1, 10, 10] * 2  # [header, note, note] * 2
+    move_rect_list = []
     for row in range(column_move_num):
         # if row % 2 == 0:
         #     continue
-        y1 = int(row*elem_h - elem_h*buffer)
-        y2 = int((row+1)*elem_h + elem_h*buffer)
+        y1 = max(int(row*elem_h - elem_h*buffer), 0)
+        y2 = min(int((row+1)*elem_h + elem_h*buffer), h)
         for column in range(len(row_elem_size_ratio)):
             x1, x2 = 10, w-10
-            x1 = int(sum(row_elem_size_ratio[:column]) / sum(row_elem_size_ratio) * w)
-            x2 = int(sum(row_elem_size_ratio[:column+1]) / sum(row_elem_size_ratio) * w)
+            x1 = max(int(sum(row_elem_size_ratio[:column]) / sum(row_elem_size_ratio) * w), 0)
+            x2 = min(int(sum(row_elem_size_ratio[:column+1]) / sum(row_elem_size_ratio) * w), w)
 
             # print(row+1, column+1, x1, x2, y1, y2)
             r, g, b = random.random()*255, random.random()*255, random.random()*255
             cv2.rectangle(img_notation_table_rec, (x1, y1), (x2, y2), (b, g, r), thickness=2)
+            move_rect_list.append(((x1, y1), (x2, y2)))
     cv2.imwrite("data/notation_table_rect.jpg", img_notation_table_rec)
 
-    return []
+    x,y,w,h = cv2.boundingRect(notation_table_contour)  # FIXME comprehensive var name
+    img_notation_table = img[y:y+h, x:x+w]
+    cv2.imwrite("data/notation_table.png", img_notation_table)
 
+    return img_notation_table, move_rect_list
+
+
+def get_img_patches(img, rect_pos_list):
+    """
+    Args:
+        img: opencv img object
+        rect_pos_list: List of each patch pos. Each elem format is ((x1, y1), (x2, y2)).
+    """
+    # For integration, impl only the first patch to return
+
+    # clip patch
+    ret = []
+    for rect_pos in rect_pos_list:
+        (x1, y1), (x2, y2) = rect_pos[0], rect_pos[1]
+        patch = img[y1:y2, x1:x2]
+        ret.append(patch)
+
+    cv2.imwrite("data/move_patch_no8_exp.png", ret[7])
+    return ret
 
 
 if __name__ == '__main__':

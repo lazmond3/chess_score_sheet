@@ -75,13 +75,8 @@ def list_notations(img):
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (6, 6))
     edge = cv2.dilate(edge, kernel)
 
-    # FIXME
+    # detected edge in the paper
     cv2.imwrite("data/edge.png", edge)
-    # cv2.imshow('window', edge)
-    # cv2.waitKey(9000)
-    # return []
-
-
 
     # clip notation table part
     contours, hierarchy = cv2.findContours(edge, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -99,38 +94,43 @@ def list_notations(img):
         notation_table_contour = contour
     assert(notation_table_contour is not None)
 
-    # draw borderline
+    # draw rect to show the notation table part in the paper
     rect_image = img.copy()
     for i, curve in enumerate(curves):
         p1, p3 = curve[0][0], curve[2][0]
         x1, y1, x2, y2 = p1[0], p1[1], p3[0], p3[1]
         r, g, b = random.random()*255, random.random()*255, random.random()*255
         cv2.rectangle(rect_image, (x1, y1), (x2, y2), (b, g, r), thickness=2)
+    cv2.imwrite("data/notation_table_part_rect.png", rect_image)
 
-    cv2.imwrite("data/borderline.png", rect_image)
-    # cv2.imshow('window', rect_image)
-    # cv2.waitKey(5000)
-
-    x,y,w,h = cv2.boundingRect(notation_table_contour)
+    # clip notation table part
+    x,y,w,h = cv2.boundingRect(notation_table_contour)  # FIXME comprehensive var name
     img_notation_table = img[y:y+h, x:x+w]
     cv2.imwrite("data/notation_table.png", img_notation_table)
-    # cv2.imshow('window', img_notation_table)
-    # cv2.waitKey(5000)
 
-    height, width, channels = img_notation_table.shape[:3]
-    print("width: " + str(width))
-    print("height: " + str(height))
+    # TODO remove this part
+    h, w, _ = img_notation_table.shape
+    print('width:  ', w, 'height: ', h)
 
     img_notation_table_rec = img_notation_table.copy()
-    elem_w = w * 0.22  # Fix magic number
-    elem_w_header = w * 0.6  # Fix magic number
-    elem_h = h / 30  # Fix magic number, 1 column has 30 moves
-    for row in range(30):
-        r, g, b = random.random()*255, random.random()*255, random.random()*255
-        x1, x2, y1, y2 = (10, w-10, int(row*elem_h + 10), int(min((row+1)*elem_h, h-x-10)))
-        print(x1, x2, y1, y2)
-        cv2.rectangle(img_notation_table_rec, (x1, y1), (x2, y2), (b, g, r), thickness=2)
-    cv2.imwrite("data/tt.jpg", img_notation_table_rec)
+    column_move_num = 30  # 1 column has 30 moves
+    elem_h = h / column_move_num
+    buffer = 0.2
+    row_elem_size_ratio = [1, 10, 10] * 2  # [header, note, note] * 2
+    for row in range(column_move_num):
+        # if row % 2 == 0:
+        #     continue
+        y1 = int(row*elem_h - elem_h*buffer)
+        y2 = int((row+1)*elem_h + elem_h*buffer)
+        for column in range(len(row_elem_size_ratio)):
+            x1, x2 = 10, w-10
+            x1 = int(sum(row_elem_size_ratio[:column]) / sum(row_elem_size_ratio) * w)
+            x2 = int(sum(row_elem_size_ratio[:column+1]) / sum(row_elem_size_ratio) * w)
+
+            # print(row+1, column+1, x1, x2, y1, y2)
+            r, g, b = random.random()*255, random.random()*255, random.random()*255
+            cv2.rectangle(img_notation_table_rec, (x1, y1), (x2, y2), (b, g, r), thickness=2)
+    cv2.imwrite("data/notation_table_rect.jpg", img_notation_table_rec)
 
     return []
 

@@ -1,6 +1,10 @@
 import cv2
 import numpy as np
 import random
+from PIL import Image
+import pyocr
+import sys
+import pytesseract
 
 def main():
     img = cv2.imread('data/sample_score_sheet.jpg', -1)
@@ -17,6 +21,10 @@ def main():
     # print('move_rect_pos_list[:3]:', move_rect_pos_list[:3])
 
     move_rect_imgs = get_img_patches(img_notation_table, move_rect_pos_list)
+
+    move_text_list = move_img2text(move_rect_imgs)
+
+    print("Done")
 
 
 def clipped_paper(img, x_size, y_size):
@@ -115,7 +123,7 @@ def list_notations(img):
     column_move_num = 30  # 1 column has 30 moves
     elem_h = h / column_move_num
     buffer = 0.2
-    row_elem_size_ratio = [1, 10, 10] * 2  # [header, note, note] * 2
+    row_elem_size_ratio = [3, 10, 10] * 2  # [header, note, note] * 2
     move_rect_list = []
     for row in range(column_move_num):
         # if row % 2 == 0:
@@ -155,7 +163,40 @@ def get_img_patches(img, rect_pos_list):
         patch = img[y1:y2, x1:x2]
         ret.append(patch)
 
-    cv2.imwrite("data/move_patch_no8_exp.png", ret[7])
+    return ret
+
+def move_img2text(move_patch_imgs):
+    move_img = move_patch_imgs[1]
+    cv2.imwrite("data/move_exp.png", move_img)
+
+    move_img = cv2.imread('data/precise_e4_only.png', -1)
+
+    tools = pyocr.get_available_tools()
+    if len(tools) == 0:
+        print("No OCR tool found")
+        sys.exit(1)
+    tool = tools[0]
+    print("Will use tool ", tool.get_name())
+
+
+    img_h,img_w = move_img.shape[:2]
+    move_img_big = cv2.resize(move_img, dsize=(img_w*6,img_h*6)) # 6倍に拡大
+
+    pil_img = Image.fromarray(cv2.cvtColor(move_img_big, cv2.COLOR_BGR2RGB))
+    pil_img.show()
+
+    # builder = pyocr.builders.TextBuilder(tesseract_layout=3)
+    # res = tool.image_to_string(pil_img, lang="eng", builder=builder)
+    # print(res)
+
+    config = '--psm 7 --oem 1 '
+    config += ' -c tessedit_char_whitelist="x12345678abcdefghRNBQK="'
+    move_text = pytesseract.image_to_string(move_img_big, config=config).strip()
+    print('[Detected text]', move_text)
+
+
+    pass
+    ret = []
     return ret
 
 

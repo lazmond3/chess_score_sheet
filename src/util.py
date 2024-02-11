@@ -412,7 +412,6 @@ def main(args):
         results = keras.backend.ctc_decode(pred, input_length=input_len, greedy=True)[0][0][
             :, :max_len
         ]
-        print('results', results)
         # Iterate over the results and get back the text.
         output_text = []
         for res in results:
@@ -428,11 +427,8 @@ def main(args):
         _, ax = plt.subplots(4, 4, figsize=(15, 8))
 
         preds = prediction_model.predict(batch_images)
-        print('preds:', preds[0][0])
         input_len = np.ones(preds.shape[0]) * preds.shape[1]
-        print('input_len', input_len)
         pred_texts = decode_batch_predictions(preds)
-        print('pred_texts:', pred_texts)
 
         for i in range(16):
             img = batch_images[i]

@@ -276,6 +276,9 @@ def main(args):
         np.random.seed(args.random_seed)
         tf.random.set_seed(args.random_seed)
 
+    ######################
+    # Dataset preprocess #
+    ######################
     dataset_map = get_dataset(args)
 
     # Build the character vocabulary
@@ -310,6 +313,7 @@ def main(args):
     test_ds = prepare_dataset(dataset_map["test"]["img_paths"],
                               dataset_map["test"]["labels"])
 
+    # print dataset samples
     for data in train_ds.take(1):
         images, labels = data["image"], data["label"]
 
@@ -337,14 +341,19 @@ def main(args):
     if args.plt_show:
         plt.show()
 
+    ################
+    # Define model #
+    ################
+
     model = build_model()
     model.summary()
 
-    # Evaluation metric
-
+    ############
+    # Training #
+    ############
+    # Define current accuracy value to print in the progress log
     validation_images = []
     validation_labels = []
-
     for batch in validation_ds:
         validation_images.append(batch["image"])
         validation_labels.append(batch["label"])
@@ -386,27 +395,24 @@ def main(args):
                 f"Mean edit distance for epoch {epoch + 1}: {np.mean(edit_distances):.4f}"
             )
 
-    # Training
-
-    epochs = 1  # To get good results this should be at least 50.
-
-    model = build_model()
     prediction_model = keras.models.Model(
         model.get_layer(name="image").input, model.get_layer(name="dense2").output
     )
     edit_distance_callback = EditDistanceCallback(prediction_model)
 
-    # Train the model.
-    history = model.fit(
+    # Run training
+    model.fit(
         train_ds,
         validation_data=validation_ds,
-        epochs=epochs,
+        epochs=args.epoch_num,
         callbacks=[edit_distance_callback],
     )
 
     model.save(args.output)
 
-    # Inference
+    ########
+    # Test #
+    ########
 
     # A utility function to decode the output of the network.
     def decode_batch_predictions(pred):
@@ -452,6 +458,8 @@ if __name__ == '__main__':
     parser.add_argument('--input', '-i', default="data/")
     parser.add_argument('--output', '-o', default="output_model/")
     parser.add_argument('--random_seed', '-r', type=int, default=None)
+    parser.add_argument('--epoch_num', '-e', type=int, default=1,
+                        help='Shold be at least 50 for good accuracy')
     parser.add_argument('--plt_show', '-p', action='store_true')
     args = parser.parse_args()
 

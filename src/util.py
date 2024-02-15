@@ -19,10 +19,6 @@ train_ratio = {
 # assert sum(train_ratio.keys()) == 1
 
 
-# model params
-batch_size = 64
-padding_token = 99
-
 class CTCLayer(keras.layers.Layer):
     def __init__(self, name=None):
         super().__init__(name=name)
@@ -173,26 +169,13 @@ def get_dataset(args):
 
     # Create the list of `clean` labels (w/ only the transcription part of the label )
     train_labels_cleaned = []
-    characters = set()
-    global max_len
-    max_len = 0
-
     for label in train_labels:
         label = label.split(" ")[-1].strip()
-        for char in label:
-            characters.add(char)
-
-        max_len = max(max_len, len(label))
         train_labels_cleaned.append(label)
-
-    characters = sorted(list(characters))
-
-    print("Maximum length: ", max_len)
-    print("Vocab size: ", len(characters))
 
     def clean_labels(labels):
         """
-        `clean` means only the transcription part of the label 
+        `clean` means only the transcription part of the label
         """
         cleaned_labels = []
         for label in labels:
@@ -203,7 +186,7 @@ def get_dataset(args):
     validation_labels_cleaned = clean_labels(validation_labels)
     test_labels_cleaned = clean_labels(test_labels)
 
-    return (characters, train_img_paths, train_labels_cleaned,
+    return (train_img_paths, train_labels_cleaned,
             validation_img_paths, validation_labels_cleaned,
             test_img_paths, test_labels_cleaned)
 
@@ -245,6 +228,7 @@ def distortion_free_resize(image, img_size):
     return image
 
 
+# model params
 batch_size = 64
 padding_token = 99
 image_width = 256
@@ -275,9 +259,9 @@ def process_images_labels(image_path, label):
 
 def prepare_dataset(image_paths, labels):
     dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels)).map(
-        process_images_labels, num_parallel_calls=AUTOTUNE
+        process_images_labels, num_parallel_calls=tf.data.AUTOTUNE
     )
-    return dataset.batch(batch_size).cache().prefetch(AUTOTUNE)
+    return dataset.batch(batch_size).cache().prefetch(tf.data.AUTOTUNE)
 
 
 def main(args):
@@ -285,14 +269,25 @@ def main(args):
         np.random.seed(args.random_seed)
         tf.random.set_seed(args.random_seed)
 
-    characters, train_img_paths, train_labels_cleaned, \
+    train_img_paths, train_labels_cleaned, \
         validation_img_paths, validation_labels_cleaned, \
         test_img_paths, test_labels_cleaned \
         = get_dataset(args)
-    # Build the character vocabulary
 
-    global AUTOTUNE
-    AUTOTUNE = tf.data.AUTOTUNE
+    # Build the character vocabulary
+    global max_len
+    max_len = 0
+    characters = set()
+
+    for label in train_labels_cleaned:
+        max_len = max(max_len, len(label))
+        for char in label:
+            characters.add(char)
+
+    characters = sorted(list(characters))
+
+    print("Maximum length: ", max_len)
+    print("Vocab size: ", len(characters))
 
     # Mapping characters to integers.
     global char_to_num

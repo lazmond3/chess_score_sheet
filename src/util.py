@@ -186,9 +186,16 @@ def get_dataset(args):
     validation_labels_cleaned = clean_labels(validation_labels)
     test_labels_cleaned = clean_labels(test_labels)
 
-    return (train_img_paths, train_labels_cleaned,
-            validation_img_paths, validation_labels_cleaned,
-            test_img_paths, test_labels_cleaned)
+    ret = {
+        "train":      {"img_paths": train_img_paths,
+                       "labels": train_labels_cleaned},
+        "validation": {"img_paths": validation_img_paths,
+                       "labels": validation_labels_cleaned},
+        "test":       {"img_paths": test_img_paths,
+                       "labels": test_labels_cleaned},
+           }
+
+    return ret
 
 
 def distortion_free_resize(image, img_size):
@@ -269,17 +276,14 @@ def main(args):
         np.random.seed(args.random_seed)
         tf.random.set_seed(args.random_seed)
 
-    train_img_paths, train_labels_cleaned, \
-        validation_img_paths, validation_labels_cleaned, \
-        test_img_paths, test_labels_cleaned \
-        = get_dataset(args)
+    dataset_map = get_dataset(args)
 
     # Build the character vocabulary
     global max_len
     max_len = 0
     characters = set()
 
-    for label in train_labels_cleaned:
+    for label in dataset_map["train"]["labels"]:
         max_len = max(max_len, len(label))
         for char in label:
             characters.add(char)
@@ -299,9 +303,12 @@ def main(args):
         vocabulary=char_to_num.get_vocabulary(), mask_token=None, invert=True
     )
 
-    train_ds = prepare_dataset(train_img_paths, train_labels_cleaned)
-    validation_ds = prepare_dataset(validation_img_paths, validation_labels_cleaned)
-    test_ds = prepare_dataset(test_img_paths, test_labels_cleaned)
+    train_ds = prepare_dataset(dataset_map["train"]["img_paths"],
+                               dataset_map["train"]["labels"])
+    validation_ds = prepare_dataset(dataset_map["validation"]["img_paths"],
+                                    dataset_map["validation"]["labels"])
+    test_ds = prepare_dataset(dataset_map["test"]["img_paths"],
+                              dataset_map["test"]["labels"])
 
     for data in train_ds.take(1):
         images, labels = data["image"], data["label"]

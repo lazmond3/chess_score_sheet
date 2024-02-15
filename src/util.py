@@ -19,6 +19,17 @@ train_ratio = {
 assert sum(train_ratio.values()) == 1
 
 
+# TODO Add argparse options to change default values
+class ModelParams():
+    def __init__(self):
+        self.batch_size = 64
+        self.padding_token = 99
+        self.image_width = 256
+        self.image_height = 64
+global model_params
+model_params = ModelParams()
+
+
 class CTCLayer(keras.layers.Layer):
     def __init__(self, name=None):
         super().__init__(name=name)
@@ -40,7 +51,7 @@ class CTCLayer(keras.layers.Layer):
 
 def build_model():
     # Inputs to the model
-    input_img = keras.Input(shape=(image_width, image_height, 1), name="image")
+    input_img = keras.Input(shape=(model_params.image_width, model_params.image_height, 1), name="image")
     labels = keras.layers.Input(name="label", shape=(None,))
 
     # 1st conv block.
@@ -198,8 +209,8 @@ def get_dataset(args):
     return ret
 
 
-def distortion_free_resize(image, img_size):
-    w, h = img_size
+def distortion_free_resize(image):
+    w, h = model_params.image_width, model_params.image_height
     image = tf.image.resize(image, size=(h, w), preserve_aspect_ratio=True)
 
     # Check tha amount of padding needed to be done.
@@ -235,17 +246,10 @@ def distortion_free_resize(image, img_size):
     return image
 
 
-# model params
-batch_size = 64
-padding_token = 99
-image_width = 256
-image_height = 64
-
-
-def preprocess_image(image_path, img_size=(image_width, image_height)):
+def preprocess_image(image_path):
     image = tf.io.read_file(image_path)
     image = tf.image.decode_png(image, 1)
-    image = distortion_free_resize(image, img_size)
+    image = distortion_free_resize(image)
     image = tf.cast(image, tf.float32) / 255.0
     return image
 
@@ -254,7 +258,8 @@ def vectorize_label(label):
     label = char_to_num(tf.strings.unicode_split(label, input_encoding="UTF-8"))
     length = tf.shape(label)[0]
     pad_amount = max_len - length
-    label = tf.pad(label, paddings=[[0, pad_amount]], constant_values=padding_token)
+    label = tf.pad(label, paddings=[[0, pad_amount]],
+                   constant_values=model_params.padding_token)
     return label
 
 
@@ -268,7 +273,7 @@ def prepare_dataset(image_paths, labels):
     dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels)).map(
         process_images_labels, num_parallel_calls=tf.data.AUTOTUNE
     )
-    return dataset.batch(batch_size).cache().prefetch(tf.data.AUTOTUNE)
+    return dataset.batch(model_params.batch_size).cache().prefetch(tf.data.AUTOTUNE)
 
 
 def main(args):
@@ -282,7 +287,7 @@ def main(args):
     dataset_map = get_dataset(args)
 
     # Build the character vocabulary
-    global max_len
+    global max_len  # FIXME global variable
     max_len = 0
     characters = set()
 
@@ -329,7 +334,7 @@ def main(args):
             # Gather indices where label!= padding_token.
             label = labels[i]
             indices = tf.gather(label, tf.where(
-                tf.math.not_equal(label, padding_token)))
+                tf.math.not_equal(label, model_params.padding_token)))
             # Convert to string.
             label = tf.strings.reduce_join(num_to_char(indices))
             label = label.numpy().decode("utf-8")

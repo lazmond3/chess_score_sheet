@@ -327,7 +327,8 @@ def main(args):
             ax[i // 4, i % 4].set_title(label)
             ax[i // 4, i % 4].axis("off")
 
-    # plt.show()
+    if args.plt_show:
+        plt.show()
 
     model = build_model()
     model.summary()
@@ -437,13 +438,16 @@ def main(args):
             ax[i // 4, i % 4].set_title(title)
             ax[i // 4, i % 4].axis("off")
 
-    # plt.show()
+    if args.plt_show:
+        plt.show()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', '-i', default="data/")
     parser.add_argument('--output', '-o', default="output_model/")
     parser.add_argument('--random_seed', '-r', type=int, default=None)
+    parser.add_argument('--plt_show', '-p', action='store_true')
     args = parser.parse_args()
 
     main(args)

@@ -16,7 +16,7 @@ train_ratio = {
         "validation": 0.05,
         "test": 0.05,
         }
-# assert sum(train_ratio.keys()) == 1
+assert sum(train_ratio.values()) == 1
 
 
 class CTCLayer(keras.layers.Layer):
@@ -127,8 +127,8 @@ def get_dataset(args):
     train_samples = words_list[:split_idx]
     test_samples = words_list[split_idx:]
 
-    # TODO replace hardcoded ratio with `train_ratio`
-    val_split_idx = int(0.5 * len(test_samples))
+    validation_ratio = train_ratio["validation"] / (1 - train_ratio["train"])
+    val_split_idx = int(validation_ratio * len(test_samples))
     validation_samples = test_samples[:val_split_idx]
     test_samples = test_samples[val_split_idx:]
 
@@ -416,14 +416,12 @@ def main(args):
             output_text.append(res)
         return output_text
 
-
     #  Let's check results on some test samples.
     for batch in test_ds.take(1):
         batch_images = batch["image"]
         _, ax = plt.subplots(4, 4, figsize=(15, 8))
 
         preds = prediction_model.predict(batch_images)
-        input_len = np.ones(preds.shape[0]) * preds.shape[1]
         pred_texts = decode_batch_predictions(preds)
 
         for i in range(16):

@@ -18,6 +18,7 @@ def get_data_sheet(args):
     for line in training_tags:
         line = line.strip()
         game_id, sheet_id, move_id, color = line.split('_')
+        color = color.split(" ")[0].strip(".png")
         move = line.split(' ')[-1]
         if game_id not in ret.keys():
             ret[game_id] = {}
@@ -44,7 +45,7 @@ def get_data_move(data_sheet, args):
         for sheet_id in data_sheet[game_id].keys():
             sheet_image_filename = game_id + "_" + sheet_id + ".png"
             sheet_image_path = args.input + "/" + sheet_image_filename
-            move_image_path_list = split_sheet_image_into_move(sheet_image_path, len(data_sheet[game_id][sheet_id]))
+            move_image_path_list = split_sheet_image_into_move(sheet_image_path)
             for move_idx, move_image_path in enumerate(move_image_path_list):
                 color = "white" if move_idx % 2 == 0 else "black"
                 move_name = str((move_idx // 2) + 1) + "_" + color
@@ -57,7 +58,7 @@ def get_data_move(data_sheet, args):
     return image_path_list, move_list
 
 
-def split_sheet_image_into_move(sheet_image_path, move_length):
+def split_sheet_image_into_move(sheet_image_path):
     # load data
     sheet_image = cv2.imread(sheet_image_path, cv2.IMREAD_GRAYSCALE)
     if sheet_image is None:
@@ -70,7 +71,8 @@ def split_sheet_image_into_move(sheet_image_path, move_length):
     move_height_margin = int(move_height * 0.1)
     # TODO: refactor this block
     # NOTE: why y margin bigger? <- Player used to write move near lower line
-    for move_idx in range(move_length):
+    move_num_on_sheet = 60 * 2
+    for move_idx in range(move_num_on_sheet):
         if move_idx < 30:
             # white move
             x1, y1 = 0, move_height * move_idx
@@ -106,8 +108,7 @@ def split_sheet_image_into_move(sheet_image_path, move_length):
     os.makedirs(move_image_dir, exist_ok=True)
     sheet_image_path = move_image_dir + ''
     move_image_path_list = []
-    # FIXME replace move_length with last idx of the valid moves
-    for move_idx in range(move_length):
+    for move_idx in range(move_num_on_sheet):
         x1, y1, x2, y2 = move_rect_list[move_idx]
         img_cropped = sheet_image[y1:y2, x1:x2]
 

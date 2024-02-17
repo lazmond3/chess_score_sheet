@@ -17,13 +17,14 @@ def get_data_sheet(args):
     ret = {}
     for line in training_tags:
         line = line.strip()
-        game_id, sheet_id, _, _ = line.split('_')
+        game_id, sheet_id, move_id, color = line.split('_')
         move = line.split(' ')[-1]
         if game_id not in ret.keys():
             ret[game_id] = {}
         if sheet_id not in ret[game_id].keys():
-            ret[game_id][sheet_id] = []
-        ret[game_id][sheet_id].append(move)
+            ret[game_id][sheet_id] = {}
+        move_name = move_id + "_" + color
+        ret[game_id][sheet_id][move_name] = move
 
     return ret
 
@@ -44,9 +45,13 @@ def get_data_move(data_sheet, args):
             sheet_image_filename = game_id + "_" + sheet_id + ".png"
             sheet_image_path = args.input + "/" + sheet_image_filename
             move_image_path_list = split_sheet_image_into_move(sheet_image_path, len(data_sheet[game_id][sheet_id]))
-            image_path_list.extend(move_image_path_list)
             for move_idx, move_image_path in enumerate(move_image_path_list):
-                move_list.append(data_sheet[game_id][sheet_id][move_idx])
+                color = "white" if move_idx % 2 == 0 else "black"
+                move_name = str((move_idx // 2) + 1) + "_" + color
+                if data_sheet[game_id][sheet_id].get(move_name, None) is None:
+                    continue
+                move_list.append(data_sheet[game_id][sheet_id][move_name])
+                image_path_list.append(move_image_path)
 
     assert len(image_path_list) == len(move_list)
     return image_path_list, move_list
@@ -65,31 +70,31 @@ def split_sheet_image_into_move(sheet_image_path, move_length):
     move_height_margin = int(move_height * 0.1)
     # TODO: refactor this block
     # NOTE: why y margin bigger? <- Player used to write move near lower line
-    for move_num in range(move_length):
-        if move_num < 30:
+    for move_idx in range(move_length):
+        if move_idx < 30:
             # white move
-            x1, y1 = 0, move_height * move_num
+            x1, y1 = 0, move_height * move_idx
             x2, y2 = x1 + move_width, y1 + move_height
             y1 = max(0, y1 - move_height_margin)
             y2 = min(img_height, y2 + move_height_margin * 2)
             move_rect_list.append((x1, y1, x2, y2))
 
             # black move
-            x1, y1 = move_width, move_height * move_num
+            x1, y1 = move_width, move_height * move_idx
             x2, y2 = x1 + move_width, y1 + move_height
             y1 = max(0, y1 - move_height_margin)
             y2 = min(img_height, y2 + move_height_margin * 2)
             move_rect_list.append((x1, y1, x2, y2))
         else:
             # white move
-            x1, y1 = move_width * 2, move_height * (move_num - 30)
+            x1, y1 = move_width * 2, move_height * (move_idx - 30)
             x2, y2 = x1 + move_width, y1 + move_height
             y1 = max(0, y1 - move_height_margin)
             y2 = min(img_height, y2 + move_height_margin * 2)
             move_rect_list.append((x1, y1, x2, y2))
 
             # black move
-            x1, y1 = move_width * 3, move_height * (move_num - 30)
+            x1, y1 = move_width * 3, move_height * (move_idx - 30)
             x2, y2 = x1 + move_width, y1 + move_height
             y1 = max(0, y1 - move_height_margin)
             y2 = min(img_height, y2 + move_height_margin * 2)
@@ -101,11 +106,14 @@ def split_sheet_image_into_move(sheet_image_path, move_length):
     os.makedirs(move_image_dir, exist_ok=True)
     sheet_image_path = move_image_dir + ''
     move_image_path_list = []
-    for move_num in range(move_length):
-        x1, y1, x2, y2 = move_rect_list[move_num]
+    # FIXME replace move_length with last idx of the valid moves
+    for move_idx in range(move_length):
+        x1, y1, x2, y2 = move_rect_list[move_idx]
         img_cropped = sheet_image[y1:y2, x1:x2]
 
-        move_image_path = move_image_dir + '/move' + str(move_num + 1) + '.png'
+        color = "white" if move_idx % 2 == 0 else "black"
+        move_name = str((move_idx // 2) + 1) + "_" + color
+        move_image_path = move_image_dir + '/' + move_name + '.png'
         move_image_path_list.append(move_image_path)
         cv2.imwrite(move_image_path, img_cropped)
 

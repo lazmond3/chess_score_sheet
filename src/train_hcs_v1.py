@@ -124,7 +124,7 @@ def get_dataset(args):
     """
     words_list = []
 
-    words = open(f"{args.input}/output_move_label.txt", "r").readlines()
+    words = open(f"{args.input}/train_data.txt", "r").readlines()
     for line in words:
         if line[0] == "#":
             continue
@@ -149,7 +149,7 @@ def get_dataset(args):
 
     # Create the list of image path and labels (w/ all the info)
 
-    base_image_path = ""  # TODO parametarize this
+    base_image_path = args.input
 
     def get_image_paths_and_labels(samples):
         paths = []
@@ -431,34 +431,36 @@ def main(args):
     )
     edit_distance_callback = EditDistanceCallback(prediction_model)
 
-    # Run training
-    model.fit(
-        train_ds,
-        validation_data=validation_ds,
-        epochs=args.epoch_num,
-        callbacks=[edit_distance_callback],
-    )
+    if args.train_model:
+        model.fit(
+            train_ds,
+            validation_data=validation_ds,
+            epochs=args.epoch_num,
+            callbacks=[edit_distance_callback],
+        )
 
-    model.save(args.output)
+        model.save(args.output)
 
     ########
     # Test #
     ########
 
+    print("Start testing")
+
     # A utility function to decode the output of the network.
     def decode_batch_predictions(pred):
         input_len = np.ones(pred.shape[0]) * pred.shape[1]
         # Use greedy search. For complex tasks, you can use beam search.
-        results = keras.backend.ctc_decode(pred, input_length=input_len, greedy=True)[0][0][
-            :, :max_len
-        ]
+        ctc_decode_ret = keras.backend.ctc_decode(pred, input_length=input_len, greedy=True)
+        results = ctc_decode_ret[0][0][:, :max_len]
+        results_confidence = ctc_decode_ret[1]
         # Iterate over the results and get back the text.
         output_text = []
         for res in results:
             res = tf.gather(res, tf.where(tf.math.not_equal(res, -1)))
             res = tf.strings.reduce_join(num_to_char(res)).numpy().decode("utf-8")
             output_text.append(res)
-        return output_text
+        return output_text, results_confidence
 
     #  Let's check results on some test samples.
     for batch in test_ds.take(1):
@@ -466,7 +468,8 @@ def main(args):
         _, ax = plt.subplots(4, 4, figsize=(15, 8))
 
         preds = prediction_model.predict(batch_images)
-        pred_texts = decode_batch_predictions(preds)
+        pred_texts, pred_confidence = decode_batch_predictions(preds)
+        print("pred_confidence", pred_confidence)
 
         for i in range(16):
             img = batch_images[i]
@@ -475,7 +478,7 @@ def main(args):
             img = (img * 255.0).numpy().clip(0, 255).astype(np.uint8)
             img = img[:, :, 0]
 
-            title = f"Prediction: {pred_texts[i]}"
+            title = f"Pred: {pred_texts[i]} (conf: {pred_confidence[i][0]:.3})"
             ax[i // 4, i % 4].imshow(img, cmap="gray")
             ax[i // 4, i % 4].set_title(title)
             ax[i // 4, i % 4].axis("off")
@@ -483,16 +486,19 @@ def main(args):
     if args.plt_save:
         plt.savefig('prediction_samples.png')
 
+    print("End testing")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', '-i', default="data/HCS/")
+    parser.add_argument('--input', '-i', default="data/HCS_Dataset_December_2021/extracted_move_boxes/")
     parser.add_argument('--pretrained_model', default="output_model/")
     parser.add_argument('--output', '-o', default="output_model_hcs/")
     parser.add_argument('--random_seed', '-r', type=int, default=None)
     parser.add_argument('--epoch_num', '-e', type=int, default=1,
                         help='Shold be at least 50 for good accuracy')
     parser.add_argument('--plt_save', '-p', action='store_true')
+    parser.add_argument('--train_model', action='store_true')
     args = parser.parse_args()
 
     main(args)

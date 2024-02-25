@@ -476,6 +476,7 @@ def main(args):
         test_ds = prepare_dataset(img_paths, labels)
 
     f = open(args.predict_output, 'w')
+    f.write("img_path,prediction_unconfidence,predicted_text")
     for batch_idx, batch in enumerate(test_ds):
         batch_images = batch["image"]
         _, ax = plt.subplots(4, 4, figsize=(15, 8))
@@ -489,7 +490,7 @@ def main(args):
                 break
 
             img_path_idx = 64 * batch_idx + i
-            f.write(f"{img_paths[img_path_idx]}, {pred_confidence[i][0]}, {pred_texts[i]}\n")
+            f.write(f"{img_paths[img_path_idx]},{pred_confidence[i][0]},{pred_texts[i]}\n")
 
 
         for i in range(16):

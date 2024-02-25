@@ -463,28 +463,53 @@ def main(args):
         return output_text, results_confidence
 
     #  Let's check results on some test samples.
-    for batch in test_ds.take(1):
+    img_paths = dataset_map["test"]["img_paths"]
+    labels = dataset_map["test"]["labels"]
+    if args.pred_all_data:
+        # Replace values with all data included one
+        img_paths = dataset_map["train"]["img_paths"] + \
+                   dataset_map["validation"]["img_paths"] + \
+                   dataset_map["test"]["img_paths"]
+        labels = dataset_map["train"]["labels"] + \
+                 dataset_map["validation"]["labels"] + \
+                 dataset_map["test"]["labels"]
+        test_ds = prepare_dataset(img_paths, labels)
+
+    f = open(args.predict_output, 'w')
+    for batch_idx, batch in enumerate(test_ds):
         batch_images = batch["image"]
         _, ax = plt.subplots(4, 4, figsize=(15, 8))
 
         preds = prediction_model.predict(batch_images)
         pred_texts, pred_confidence = decode_batch_predictions(preds)
-        print("pred_confidence", pred_confidence)
+
+        # FIXME: hardcoded batch_size=64
+        for i in range(64):
+            if i >= len(preds):
+                break
+
+            img_path_idx = 64 * batch_idx + i
+            f.write(f"{img_paths[img_path_idx]}, {pred_confidence[i]}, {pred_texts[i]}\n")
+
 
         for i in range(16):
+            if i >= len(preds):
+                break
+
             img = batch_images[i]
             img = tf.image.flip_left_right(img)
             img = tf.transpose(img, perm=[1, 0, 2])
             img = (img * 255.0).numpy().clip(0, 255).astype(np.uint8)
             img = img[:, :, 0]
 
-            title = f"Pred: {pred_texts[i]} (conf: {pred_confidence[i][0]:.3})"
+            title = f"Pred: {pred_texts[i]} (unconf: {pred_confidence[i][0]:.3})"
             ax[i // 4, i % 4].imshow(img, cmap="gray")
             ax[i // 4, i % 4].set_title(title)
             ax[i // 4, i % 4].axis("off")
 
-    if args.plt_save:
-        plt.savefig('prediction_samples.png')
+        if args.plt_save:
+            plt.savefig(f"output/prediction_samples_{batch_idx}.png")
+    f.close()
 
     print("End testing")
 
@@ -494,11 +519,13 @@ if __name__ == '__main__':
     parser.add_argument('--input', '-i', default="data/HCS_Dataset_December_2021/extracted_move_boxes/")
     parser.add_argument('--pretrained_model', default="output_model/")
     parser.add_argument('--output', '-o', default="output_model_hcs/")
+    parser.add_argument('--predict_output', default="output/hcs_predict_result.txt")
     parser.add_argument('--random_seed', '-r', type=int, default=None)
     parser.add_argument('--epoch_num', '-e', type=int, default=1,
                         help='Shold be at least 50 for good accuracy')
     parser.add_argument('--plt_save', '-p', action='store_true')
     parser.add_argument('--train_model', action='store_true')
+    parser.add_argument('--pred_all_data', action='store_true')
     args = parser.parse_args()
 
     main(args)

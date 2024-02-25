@@ -124,7 +124,7 @@ def get_dataset(args):
     """
     words_list = []
 
-    words = open(f"{args.input}/train_data.txt", "r").readlines()
+    words = open(f"{args.input}/train_val_data.txt", "r").readlines()
     for line in words:
         if line[0] == "#":
             continue
@@ -489,7 +489,7 @@ def main(args):
                 break
 
             img_path_idx = 64 * batch_idx + i
-            f.write(f"{img_paths[img_path_idx]}, {pred_confidence[i]}, {pred_texts[i]}\n")
+            f.write(f"{img_paths[img_path_idx]}, {pred_confidence[i][0]}, {pred_texts[i]}\n")
 
 
         for i in range(16):

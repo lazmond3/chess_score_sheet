@@ -1,4 +1,5 @@
-img_path,prediction_unconfidence,predicted_textdata/kanagawa_champ_2023/images/R1_B1_player1_sheet1.png_moves/1_white.png,0.6773477792739868,e4
+img_path,prediction_unconfidence,predicted_text
+data/kanagawa_champ_2023/images/R1_B1_player1_sheet1.png_moves/1_white.png,0.6773477792739868,e4
 data/kanagawa_champ_2023/images/R1_B1_player1_sheet1.png_moves/2_black.png,1.9442319869995117,Qx5
 data/kanagawa_champ_2023/images/R1_B1_player1_sheet1.png_moves/58_white.png,1.1973681449890137,h6
 data/kanagawa_champ_2023/images/R1_B1_player1_sheet1.png_moves/11_black.png,2.426034688949585,Nxa6

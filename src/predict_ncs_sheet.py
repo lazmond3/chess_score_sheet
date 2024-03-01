@@ -351,7 +351,7 @@ def main(args):
     test_ds = prepare_dataset(img_paths, labels)
 
     f = open(args.predict_output, 'w')
-    f.write("img_path,prediction_unconfidence,predicted_text")
+    f.write("img_path,prediction_unconfidence,predicted_text\n")
     for batch_idx, batch in enumerate(test_ds):
         batch_images = batch["image"]
         _, ax = plt.subplots(4, 4, figsize=(15, 8))

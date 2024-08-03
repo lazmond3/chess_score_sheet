@@ -1,5 +1,9 @@
+use std::env;
+
 use yaml_rust::{Yaml, YamlLoader, YamlEmitter};
 use linked_hash_map::LinkedHashMap;
+use mysql::*;
+use mysql::prelude::*;
 
 const CHESS_CLUB_LIST: [&str; 3] = ["club8x8", "kitasenjyu", "ncs"];
 
@@ -9,13 +13,15 @@ fn main() {
     let club8x8_scraper = ChessEventScraperFactory::create("club8x8");
 
     let events = club8x8_scraper.scrape_event();
-    for e in events {
+    for e in &events {
         println!("================ event ==============");
         println!("date: {:?}", e.date);
         println!("open_time: {:?}", e.open_time);
         println!("revenue: {:?}", e.revenue);
         println!("fee: {:?}", e.fee);
     }
+
+    save_events_to_db(events).unwrap();
 }
 
 struct ChessEventScraperFactory;
@@ -193,4 +199,45 @@ fn trim_left(text: &str, patterns: Vec<String>) -> String {
     }
 
     String::from(ret)
+}
+
+fn save_events_to_db(events: Vec<EventInfo>) -> Result<()> {
+    let db_user = env::var("DB_USER").expect("DB_USER must be set");
+    let db_password = env::var("DB_PASSWORD").expect("DB_PASSWORD must be set");
+    let db_name = env::var("DB_NAME").expect("DB_NAME must be set");
+    let db_socket = env::var("DB_SOCKET").ok(); // ソケットファイルはオプション
+
+    let opts = if let Some(socket) = db_socket {
+        OptsBuilder::default()
+            .user(Some(db_user))
+            .pass(Some(db_password))
+            .db_name(Some(db_name))
+            .socket(Some(socket))
+    } else {
+        let db_host = env::var("DB_HOST").expect("DB_HOST must be set");
+        let db_port = env::var("DB_PORT").unwrap_or_else(|_| "3306".to_string()); // デフォルトポートを設定
+        OptsBuilder::default()
+            .ip_or_hostname(Some(db_host))
+            .user(Some(db_user))
+            .pass(Some(db_password))
+            .db_name(Some(db_name))
+            .tcp_port(db_port.parse().expect("DB_PORT must be a valid number"))
+    };
+
+    let pool = Pool::new(opts)?;
+    let mut conn = pool.get_conn()?;
+
+    for event in events {
+        conn.exec_drop(
+            r"INSERT INTO chess_event (date, open_time, revenue, fee)
+              VALUES (:date, :open_time, :revenue, :fee)",
+            params! {
+                "date" => event.date,
+                "open_time" => event.open_time,
+                "revenue" => event.revenue,
+                "fee" => event.fee,
+            },
+        )?;
+    }
+    Ok(())
 }
